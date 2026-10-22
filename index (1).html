@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لعبة أبرام ولوط</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
+--bg:#fff7e0;--card:#ffffff;--ink:#3b2a14;--sky:#9fdcff;--hill:#8fd16a;--hill2:#6bbd4e;--btn:#ffd166;--btn2:#ffe9a8;--ok:#4cc36b;--no:#ff7a7a;--accent:#ff8a3d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1d2236;--card:#2a3050;--ink:#fff3d6;--sky:#3b5f93;--hill:#4b8a46;--hill2:#3b7239;--btn:#e0a93c;--btn2:#5a5030;--accent:#ff9d57}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1d2236;--card:#2a3050;--ink:#fff3d6;--sky:#3b5f93;--hill:#4b8a46;--hill2:#3b7239;--btn:#e0a93c;--btn2:#5a5030;--accent:#ff9d57}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;min-height:100vh;display:flex;justify-content:center}
+#app{width:100%;max-width:560px;padding:12px;display:flex;flex-direction:column;gap:10px}
+header{display:flex;justify-content:space-between;align-items:center;font-size:22px}
+button{font-family:inherit;cursor:pointer;border:0;color:var(--ink)}
+#mus,#vox{background:var(--btn2);border-radius:50%;width:44px;height:44px;font-size:22px}
+#stars{letter-spacing:2px}
+#bar{height:10px;background:var(--btn2);border-radius:9px;overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+#stage{border-radius:20px;overflow:hidden;background:var(--sky);border:4px solid var(--card)}
+svg{display:block;width:100%;height:auto}
+.bob{animation:bob 1.2s ease-in-out infinite}
+.bob2{animation:bob 1.6s ease-in-out infinite .3s}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.sun{animation:spin 12s linear infinite;transform-origin:350px 40px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#card{background:var(--card);border-radius:20px;padding:16px;font-size:21px;line-height:1.7;text-align:center}
+#opts{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.opt,#next{background:var(--btn);border-radius:16px;padding:14px;font-size:20px;font-weight:700;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+.opt:active,#next:active{transform:translateY(3px);box-shadow:none}
+.opt.good{background:var(--ok);color:#fff}
+.opt.bad{background:var(--no);color:#fff;animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+#next{width:100%;background:var(--accent);color:#fff;font-size:22px}
+.fall{position:fixed;top:-30px;font-size:28px;animation:fall 3s linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+.big{font-size:60px}
+.rd{margin-top:10px;background:var(--btn2);border-radius:14px;padding:8px 14px;font-size:17px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div style="display:flex;gap:8px"><button id="mus" aria-label="الموسيقى">🎵</button><button id="vox" aria-label="القراءة بالصوت">🗣️</button></div><div id="stars"></div></header>
+<div id="bar"><i></i></div>
+<div id="stage"></div>
+<div id="card"></div>
+<button id="next">التالي ⬅️</button>
+</div>
+<script>
+// ---------- characters (inline SVG) ----------
+function man(x,y,robe,old,mood,name,cls){
+  const sad=mood==='sad';
+  const skin='#f6c28b';
+  const eyes=old
+   ? `<circle cx="-8" cy="-52" r="6" fill="#fff" stroke="#888"/><circle cx="8" cy="-52" r="6" fill="#fff" stroke="#888"/><circle cx="-8" cy="-52" r="2.6" fill="#222"/><circle cx="8" cy="-52" r="2.6" fill="#222"/>
+      <circle cx="-8" cy="-52" r="9" fill="none" stroke="#6b4a2b" stroke-width="2"/><circle cx="8" cy="-52" r="9" fill="none" stroke="#6b4a2b" stroke-width="2"/><path d="M-1,-52 h2" stroke="#6b4a2b" stroke-width="2"/>
+      <path d="M-16,-63 q6,-5 12,0 M4,-63 q6,-5 12,0" stroke="#e8e8e8" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <path d="M-10,-71 q10,-4 20,0" stroke="#d9a77a" stroke-width="1.5" fill="none"/>`
+   : `<circle cx="-8" cy="-52" r="6.5" fill="#fff" stroke="#555"/><circle cx="8" cy="-52" r="6.5" fill="#fff" stroke="#555"/><circle cx="-7" cy="-51" r="3.2" fill="#222"/><circle cx="9" cy="-51" r="3.2" fill="#222"/><circle cx="-6" cy="-52.5" r="1" fill="#fff"/><circle cx="10" cy="-52.5" r="1" fill="#fff"/>`
+     + (sad?'<path d="M-15,-63 l9,3 M15,-63 l-9,3" stroke="#3b2314" stroke-width="3" stroke-linecap="round"/>':'<path d="M-15,-62 q6,-4 11,-1 M4,-63 q6,-3 11,1" stroke="#3b2314" stroke-width="3" stroke-linecap="round" fill="none"/>');
+  const hair=old
+   ? `<circle cx="-21" cy="-54" r="8" fill="#fff" stroke="#ddd"/><circle cx="21" cy="-54" r="8" fill="#fff" stroke="#ddd"/><circle cx="-16" cy="-68" r="5" fill="#fff" stroke="#ddd"/><circle cx="16" cy="-68" r="5" fill="#fff" stroke="#ddd"/>`
+   : `<path d="M-23,-52 Q-27,-84 0,-81 Q27,-84 23,-52 Q12,-66 0,-64 Q-12,-66 -23,-52Z" fill="#3b2314"/><path d="M-3,-80 q4,-12 12,-8 q-5,2 -4,8Z" fill="#3b2314"/><path d="M-22,-60 Q0,-70 22,-60" stroke="#f4d03f" stroke-width="5" fill="none"/>`;
+  const lower=old
+   ? `<path d="M-21,-46 Q-27,-10 0,-6 Q27,-10 21,-46 Q11,-28 0,-30 Q-11,-28 -21,-46Z" fill="#fff" stroke="#d5d5d5" stroke-width="1.5"/>
+      <ellipse cx="-8" cy="-36" rx="10" ry="4.5" fill="#fff" stroke="#d5d5d5" transform="rotate(14 -8 -36)"/><ellipse cx="8" cy="-36" rx="10" ry="4.5" fill="#fff" stroke="#d5d5d5" transform="rotate(-14 8 -36)"/>
+      <path d="${sad?'M-5,-23 Q0,-28 5,-23':'M-5,-26 Q0,-20 5,-26'}" stroke="#7a2e1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>`
+   : (sad?'<path d="M-6,-30 Q0,-37 6,-30" stroke="#7a2e1a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M-12,-46 q-2,6 0,9" stroke="#4aa3ff" stroke-width="3" fill="none"/>'
+          :'<path d="M-10,-36 Q0,-22 10,-36 Z" fill="#8b1e1e" stroke="#6b1010" stroke-linejoin="round"/><path d="M-5,-30 Q0,-26 5,-30" fill="#ff8aa0"/>');
+  const stick=old?`<path d="M40,-8 V26" stroke="#7a4a1e" stroke-width="4" stroke-linecap="round"/><path d="M40,-8 q0,-9 -8,-7" stroke="#7a4a1e" stroke-width="4" fill="none" stroke-linecap="round"/>`:'';
+  return `<g transform="translate(${x},${y}) scale(1.15)"><g class="${cls||'bob'}">
+  <ellipse cx="-11" cy="26" rx="9" ry="4" fill="#6b3d17"/><ellipse cx="11" cy="26" rx="9" ry="4" fill="#6b3d17"/>
+  <path d="M-22,-26 Q0,-18 22,-26 L30,24 L-30,24 Z" fill="${robe}"/><rect x="-26" y="-4" width="52" height="6" fill="#f4d03f"/>
+  <path d="M-22,-20 L-34,2 M22,-20 L${old?36:34},${old?-4:2}" stroke="${robe}" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="-34" cy="3" r="5" fill="${skin}"/><circle cx="${old?36:34}" cy="${old?-4:3}" r="5" fill="${skin}"/>${stick}
+  <circle cx="0" cy="-48" r="23" fill="${skin}"/>${hair}${eyes}
+  <circle cx="-15" cy="-41" r="4.5" fill="#ff9aa2" opacity=".7"/><circle cx="15" cy="-41" r="4.5" fill="#ff9aa2" opacity=".7"/>
+  <circle cx="0" cy="-44" r="${old?5.5:4}" fill="#f19a8a"/>${lower}
+  </g><text y="46" text-anchor="middle" font-size="15" font-weight="700" fill="#3b2a14" stroke="#fff" stroke-width="3" paint-order="stroke">${name}</text></g>`;
+}
+function sheep(x,y,s,cls){
+  return `<g transform="translate(${x},${y}) scale(${s||1})"><g class="${cls||'bob2'}">
+  <ellipse cx="0" cy="0" rx="17" ry="12" fill="#fff" stroke="#bbb"/>
+  <circle cx="-9" cy="-5" r="7" fill="#fff"/><circle cx="8" cy="-6" r="7" fill="#fff"/>
+  <circle cx="19" cy="-2" r="7" fill="#444"/><circle cx="21" cy="-4" r="1.5" fill="#fff"/>
+  <path d="M-8,10 v8 M8,10 v8" stroke="#444" stroke-width="3"/></g></g>`;
+}
+function tent(x,y,c){return `<g transform="translate(${x},${y})"><path d="M-28,0 L0,-40 L28,0Z" fill="${c}"/><path d="M0,-40 L-8,0 L8,0Z" fill="#6b3d17"/></g>`}
+function tree(x,y){return `<g transform="translate(${x},${y})"><rect x="-4" y="-20" width="8" height="24" fill="#7a4a1e"/><circle cy="-34" r="20" fill="#3fa84d"/><circle cx="-12" cy="-26" r="13" fill="#4cbb5b"/></g>`}
+function city(x,y){return `<g transform="translate(${x},${y})"><rect x="-30" y="-40" width="22" height="40" fill="#c9a27a"/><rect x="-6" y="-56" width="24" height="56" fill="#b88b60"/><rect x="20" y="-34" width="20" height="34" fill="#c9a27a"/><rect x="-1" y="-46" width="6" height="8" fill="#ffe08a"/><rect x="26" y="-24" width="6" height="8" fill="#ffe08a"/></g>`}
+function base(inner,extra){
+  return `<svg viewBox="0 0 400 230" role="img" aria-label="مشهد من القصة">
+  <g class="sun"><circle cx="350" cy="40" r="22" fill="#ffd93b"/>${[0,45,90,135,180,225,270,315].map(a=>`<rect x="347" y="6" width="6" height="12" fill="#ffd93b" transform="rotate(${a} 350 40)"/>`).join('')}</g>
+  <ellipse cx="80" cy="45" rx="40" ry="14" fill="#fff" opacity=".85"/><ellipse cx="110" cy="38" rx="26" ry="12" fill="#fff" opacity=".85"/>
+  <path d="M0,150 Q100,110 200,150 T400,140 V230 H0Z" style="fill:var(--hill2)"/>
+  <path d="M0,175 Q120,150 260,178 T400,170 V230 H0Z" style="fill:var(--hill)"/>${inner}${extra||''}</svg>`;
+}
+const A=(x,m,c)=>man(x,165,'#c0392b',true,m||'happy','أبرام',c);
+const L=(x,m,c)=>man(x,165,'#2e86c1',false,m||'happy','لوط',c);
+const scenes={
+ love:()=>base(tent(60,185,'#e9b872')+tree(350,185)+A(170)+sheep(250,195,1)+sheep(300,200,.9)+`<text x="170" y="48" font-size="34" text-anchor="middle" class="bob2">❤️</text>`),
+ both:()=>base(tent(50,185,'#e9b872')+A(130)+L(260)+sheep(180,200)+sheep(210,205,.9)+sheep(320,198)+sheep(350,205,.9)+sheep(90,205,.8)),
+ fight:()=>base(A(120,'sad')+L(280,'sad')+sheep(200,200)+sheep(165,205,.8)+sheep(240,205,.8)+`<text x="200" y="90" font-size="50" text-anchor="middle" class="bob">💢</text><text x="120" y="52" font-size="28" text-anchor="middle">😟</text><text x="280" y="52" font-size="28" text-anchor="middle">😟</text>`),
+ idea:()=>base(A(150)+L(260)+`<text x="150" y="46" font-size="40" text-anchor="middle" class="bob2">💡</text><text x="205" y="150" font-size="30" text-anchor="middle">🤝</text>`+sheep(80,205,.9)+sheep(340,205,.9)),
+ split:()=>base(tent(70,185,'#e9b872')+A(110)+sheep(40,205,.8)+city(330,190)+tree(270,190)+L(300,'happy')+sheep(235,205,.8)+`<text x="90" y="60" font-size="16" text-anchor="middle" fill="#3b2a14">أرض كنعان</text><text x="320" y="60" font-size="16" text-anchor="middle" fill="#3b2a14">سدوم</text>`),
+ bless:()=>base(tent(60,185,'#e9b872')+A(200)+sheep(130,200)+sheep(280,200)+`<text x="200" y="40" font-size="30" text-anchor="middle" class="bob">⭐ ✨ ⭐</text><text x="130" y="90" font-size="30" class="bob2">✨</text><text x="270" y="90" font-size="30" class="bob2">✨</text>`),
+ win:()=>base(A(130)+L(270)+sheep(200,205)+`<text x="200" y="60" font-size="46" text-anchor="middle" class="bob">🎉</text>`)
+};
+// ---------- story + questions ----------
+const steps=[
+ {s:'both',t:'أهلاً يا بطل! 🎈 يلا نسمع قصة أبرام العجوز ولوط الشاب، ونلعب مع بعض. اضغط التالي.'},
+ {s:'love',t:'أبرام كان بيحب ربنا قوي، وبيحب كل الناس. وكان عنده غنم وخيرات كتير 🐑'},
+ {s:'both',t:'وكان عند أبرام ابن أخيه اسمه لوط، ولوط كمان عنده غنم كتير. وعاشوا مع بعض في أرض واحدة.'},
+ {s:'both',q:'مين هو لوط؟',o:['ابن أخو أبرام','راعي غنم غريب','ابن أبرام'],c:0,f:'برافو! لوط ابن أخو أبرام 👏'},
+ {s:'fight',t:'في يوم، رعاة أبرام ورعاة لوط اتخانقوا! الأرض ضاقت بالغنم الكتير 😟'},
+ {s:'idea',q:'إيه اللي عمله أبرام عشان يحل المشكلة؟',o:['اتخانق عشان ياخد أحسن أرض','قال للوط: احنا إخوة، اختار انت الأول','مشي ومكلمش حد'],c:1,f:'صح! أبرام بيحب السلام ويحب لوط 💛'},
+ {s:'idea',t:'أبرام قال للوط: لو رحت شمال أنا هاروح يمين، ولو رحت يمين أنا هاروح شمال. خلينا نبقى أحباب ومنتخانقش.'},
+ {s:'split',q:'مين اختار الأرض الأول؟',o:['أبرام','لوط','الرعاة'],c:1,f:'أحسنت! لوط اختار الأول لأن أبرام بيحبه ❤️'},
+ {s:'split',t:'لوط اختار أرض الأردن الحلوة وسكن في سدوم. وأبرام سكن في أرض كنعان. وأبرام فرحان بيحب السلام.'},
+ {s:'split',q:'أبرام سكن فين؟',o:['سدوم','مصر','أرض كنعان'],c:2,f:'ممتاز! أبرام سكن في أرض كنعان 🏕️'},
+ {s:'bless',t:'ربنا بارك أبرام لأنه بيحب السلام. وبعد كده ربنا سماه «إبراهيم»، ومراته اسمها سارة ✨'},
+ {s:'bless',q:'إيه اللي نتعلمه من أبرام؟',o:['ناخد أحسن حاجة لنفسنا','نتخانق عشان حقنا','نحب السلام ونسيب التاني يختار'],c:2,f:'يا سلام! انت شاطر جداً 🌟'}
+];
+let i=0,stars=0,tried=false,answered=false;
+const $=s=>document.querySelector(s);
+// ---------- audio (Web Audio, no files) ----------
+let ac,master,on=true,timer,beat=0;
+const pent=[261.6,293.7,329.6,392,440,523.3];
+const tune=[0,2,4,2,3,1,2,0, 4,5,4,3,2,3,1,0];
+function tone(f,d,v,type,t0){const o=ac.createOscillator(),g=ac.createGain();o.type=type||'triangle';o.frequency.value=f;g.gain.setValueAtTime(v,t0||ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,(t0||ac.currentTime)+d);o.connect(g);g.connect(master);o.start(t0||ac.currentTime);o.stop((t0||ac.currentTime)+d)}
+function startMusic(){
+  if(ac){if(ac.state==='suspended')ac.resume();return}
+  try{ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=.5;master.connect(ac.destination);
+  timer=setInterval(()=>{tone(pent[tune[beat%16]],.5,.14);if(beat%4===0)tone(pent[0]/2,.9,.1,'sine');beat++},420)}catch(e){}
+}
+function sfx(ok){if(!ac||!on)return;const t=ac.currentTime;
+  if(ok){[0,2,4,5].forEach((n,k)=>tone(pent[n]*2,.3,.2,'triangle',t+k*.1))}else{tone(180,.3,.2,'sawtooth',t);tone(140,.3,.2,'sawtooth',t+.15)}}
+$('#mus').onclick=()=>{startMusic();on=!on;if(master)master.gain.value=on?.5:0;$('#mus').textContent=on?'🎵':'🔇'};
+
+// ---------- reading aloud (browser speech, Arabic voice if available) ----------
+let vox=true;
+function duck(d){if(master&&on)master.gain.value=d?.18:.5}
+function speak(text){
+  try{
+    if(!('speechSynthesis' in window))return;
+    speechSynthesis.cancel();
+    if(!vox||!text)return;
+    const u=new SpeechSynthesisUtterance(text.replace(/[\p{Extended_Pictographic}\uFE0F«»]/gu,''));
+    const vs=speechSynthesis.getVoices();
+    const v=vs.find(x=>/^ar[-_]EG/i.test(x.lang))||vs.find(x=>/^ar/i.test(x.lang));
+    if(v)u.voice=v;u.lang=v?v.lang:'ar-EG';u.rate=.85;u.pitch=1.1;
+    u.onstart=()=>duck(true);u.onend=u.onerror=()=>duck(false);
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+if('speechSynthesis' in window)speechSynthesis.onvoiceschanged=()=>{};
+$('#vox').onclick=()=>{startMusic();vox=!vox;$('#vox').textContent=vox?'🗣️':'🤐';if(!vox){try{speechSynthesis.cancel()}catch(e){}duck(false)}else readStep()};
+function stepText(){const st=steps[i];return st.q?st.q+'، '+st.o.join('، أو '):st.t}
+function readStep(){speak(stepText())}
+// ---------- render ----------
+function confetti(){const e=['🎉','⭐','🐑','✨','💛','🌟'];for(let k=0;k<26;k++){const s=document.createElement('span');s.className='fall';s.textContent=e[k%e.length];s.style.left=Math.random()*95+'vw';s.style.animationDelay=Math.random()*1.2+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),4500)}}
+function drawStars(){$('#stars').textContent='⭐'.repeat(stars)||'☆'}
+function render(){
+  startMusic();
+  const st=steps[i];$('#bar i').style.width=(i/steps.length*100)+'%';
+  $('#stage').innerHTML=scenes[st.s]();
+  const card=$('#card'),nx=$('#next');
+  tried=false;answered=false;
+  if(st.q){
+    card.innerHTML=`<div>🤔 ${st.q}</div><div id="opts"></div><div id="fb" style="margin-top:10px;min-height:30px"></div><button class="rd" id="rd">🔊 اسمع تاني</button>`;
+    st.o.forEach((x,k)=>{const b=document.createElement('button');b.className='opt';b.textContent=x;b.onclick=()=>pick(b,k);$('#opts').appendChild(b)});
+    nx.style.display='none';
+  }else{card.innerHTML=`<div>${st.t}</div><button class="rd" id="rd">🔊 اسمع تاني</button>`;nx.style.display='block'}
+  $('#rd').onclick=readStep;readStep();
+  drawStars();
+}
+function pick(b,k){
+  if(answered)return;const st=steps[i];
+  if(k===st.c){answered=true;b.classList.add('good');if(!tried){stars++;drawStars()}sfx(true);confetti();$('#fb').textContent=st.f;setTimeout(()=>speak(st.f),600);$('#next').style.display='block'}
+  else{tried=true;b.classList.add('bad');sfx(false);$('#fb').textContent='حاول تاني، انت تقدر! 💪';speak('حاول تاني، انت تقدر');setTimeout(()=>b.classList.remove('bad'),500)}
+}
+function finish(){
+  $('#bar i').style.width='100%';$('#stage').innerHTML=scenes.win();
+  const total=steps.filter(s=>s.q).length;
+  $('#card').innerHTML=`<div class="big">🏆</div><div>برافو يا بطل! جمعت ${stars} نجمة من ${total}</div><div style="margin-top:8px">أبرام علمنا نحب السلام ونتنازل لأحبائنا 💛</div>`;
+  const nx=$('#next');nx.textContent='نلعب تاني 🔁';nx.style.display='block';nx.onclick=()=>{i=0;stars=0;nx.textContent='التالي ⬅️';nx.onclick=go;render()};
+  speak('برافو يا بطل! أبرام علمنا نحب السلام ونتنازل لأحبائنا');confetti();if(ac&&on){[0,2,4,5,4,5].forEach((n,k)=>tone(pent[n]*2,.35,.2,'triangle',ac.currentTime+k*.15))}
+}
+function go(){try{speechSynthesis.cancel()}catch(e){}i++;if(i>=steps.length)finish();else render()}
+$('#next').onclick=go;
+render();
+</script>
+</body>
+</html>
